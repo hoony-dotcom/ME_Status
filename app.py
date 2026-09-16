@@ -10,10 +10,10 @@ import seaborn as sns
 # 1. 페이지 설정
 st.set_page_config(page_title="의료장비 현황 대시보드", page_icon="🏥", layout="wide")
 
-# 운영체제별 한글 폰트 자동 설정 및 마이너스 기호 깨짐 방지
+# 운영체제별 한글 폰트 설정 (폰트 깨짐 방지)
 def set_korean_font():
     font_list = [f.name for f in fm.fontManager.ttflist]
-    candidates = ['NanumGothic', 'Malgun Gothic', 'AppleGothic', 'Nanum Barun Gothic', 'DejaVu Sans']
+    candidates = ['Malgun Gothic', 'AppleGothic', 'NanumGothic', 'Nanum Barun Gothic', 'DejaVu Sans']
     
     selected_font = 'DejaVu Sans'
     for font in candidates:
@@ -101,32 +101,75 @@ st.title("🏥 병원 의료장비 현황 대시보드")
 st.markdown(f"**📅 기준일:** {base_date_display} &nbsp;&nbsp;|&nbsp;&nbsp; **현재 필터:** {filter_status_text}")
 st.markdown("---")
 
-# 7. 상단 KPI 요약 메트릭 (금액 천원 단위 환산)
+# 7. 상단 KPI 요약 카드 (줄임표 방지 및 자연스러운 줄바꿈 적용 HTML/CSS)
 total_cost_thousand = df['취득가'].sum() / 1_000
+high_risk_count = len(df[df['등급\n분류'].astype(str).str.contains('3|4')])
+d_status_count = len(df[df['자산\n상태'] == 'D'])
 
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.metric(label="조회 장비 대수", value=f"{len(df):,} 대")
-with col2:
-    st.metric(label="총 취득가액", value=f"{total_cost_thousand:,.1f} 천원")
-with col3:
-    high_risk_count = len(df[df['등급\n분류'].astype(str).str.contains('3|4')])
-    st.metric(label="고위험 장비 (3/4등급)", value=f"{high_risk_count:,} 대")
-with col4:
-    d_status_count = len(df[df['자산\n상태'] == 'D'])
-    st.metric(label="노후/불용 검토 (D등급)", value=f"{d_status_count:,} 대")
+kpi_html = f"""
+<style>
+.kpi-container {{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+}}
+.kpi-card {{
+    flex: 1;
+    min-width: 200px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}}
+.kpi-label {{
+    font-size: 14px;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 8px;
+    word-break: keep-all;
+}}
+.kpi-value {{
+    font-size: 24px;
+    color: #212529;
+    font-weight: bold;
+    word-break: break-all;
+    line-height: 1.3;
+}}
+</style>
 
+<div class="kpi-container">
+    <div class="kpi-card">
+        <div class="kpi-label">조회 장비 대수</div>
+        <div class="kpi-value">{len(df):,} 대</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">총 취득가액</div>
+        <div class="kpi-value">{total_cost_thousand:,.1f} 천원</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">고위험 장비 (3/4등급)</div>
+        <div class="kpi-value">{high_risk_count:,} 대</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-label">노후/불용 검토 (D등급)</div>
+        <div class="kpi-value">{d_status_count:,} 대</div>
+    </div>
+</div>
+"""
+
+st.markdown(kpi_html, unsafe_allow_html=True)
 st.markdown("---")
 
-# 8. 메인 그래프 영역 (3단 컬럼 배치)
-col1, col2, col3 = st.columns(3)
+# 8. 메인 그래프 영역 (2단 컬럼 배치)
+row1_col1, row1_col2 = st.columns(2)
 
-# [1단] 자산 상태별 현황
-with col1:
+with row1_col1:
     st.subheader("📊 자산 상태별 현황")
     status_counts = df['자산\n상태'].value_counts()
     
-    fig1, ax1 = plt.subplots(figsize=(5, 4))
+    fig1, ax1 = plt.subplots(figsize=(6, 4.5))
     
     def make_autopct(values):
         def my_autopct(pct):
@@ -158,8 +201,7 @@ with col1:
             desc = status_desc_map.get(status, '기타')
             st.markdown(f"- **`{status}`등급**: {desc}")
 
-# [2단] 식약처/위험 등급별 현황
-with col2:
+with row1_col2:
     st.subheader("📊 위험 등급별 현황")
     grade_counts = df['등급\n분류'].value_counts()
     
@@ -175,7 +217,7 @@ with col2:
     sorted_grades = sorted(grade_counts.index, key=grade_sort_key)
     grade_counts = grade_counts.reindex(sorted_grades).dropna()
     
-    fig2, ax2 = plt.subplots(figsize=(5, 4))
+    fig2, ax2 = plt.subplots(figsize=(6, 4.5))
     sns.barplot(x=grade_counts.index, y=grade_counts.values, ax=ax2, palette='viridis')
     ax2.set_ylabel("대수")
     ax2.set_xlabel("등급")
@@ -191,12 +233,15 @@ with col2:
         st.markdown("**📋 위험 등급 상세 보기**")
         st.dataframe(grade_df, hide_index=True)
 
-# [3단] 장비 보유 상위 부서 TOP 10 현황
-with col3:
+st.markdown("")
+
+row2_col1, row2_col2 = st.columns(2)
+
+with row2_col1:
     st.subheader("📊 부서별 장비 보유 TOP 10")
     dept_counts = df['사용\n부서'].value_counts().head(10)
     
-    fig3, ax3 = plt.subplots(figsize=(5, 4))
+    fig3, ax3 = plt.subplots(figsize=(6, 4.5))
     sns.barplot(y=dept_counts.index, x=dept_counts.values, ax=ax3, palette='mako', orient='h')
     ax3.set_xlabel("장비 대수")
     ax3.set_ylabel("부서명")
@@ -210,6 +255,9 @@ with col3:
     with st.container():
         st.markdown("**📋 부서별 상세 보기**")
         st.dataframe(dept_df, hide_index=True)
+
+with row2_col2:
+    st.info("💡 **팁:** 상단 사이드바의 '매각완료 장비 포함하기' 옵션을 체크하거나 해제하여 전체 장비 현황을 유연하게 비교해 보세요.")
 
 # 9. 하단 장비 상세 데이터 목록 (기본 노출 및 검색 기능)
 st.markdown("---")
