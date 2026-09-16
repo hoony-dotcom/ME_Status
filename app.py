@@ -1,6 +1,7 @@
 import os
 import glob
 import re
+from datetime import datetime
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
@@ -15,29 +16,25 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# 운영체제별 및 모바일 환경 고려한 강력한 한글 폰트 설정 함수
+# 모바일(안드로이드/iOS) 및 클라우드 환경 완벽 대응 한글 폰트 설정 함수
 def set_korean_font():
-    # matplotlib 폰트 캐시 리셋
-    try:
-        fm._rebuild()
-    except AttributeError:
-        pass
-
-    font_list = [f.name for f in fm.fontManager.ttflist]
+    nanum_fonts = [f for f in fm.fontManager.ttflist if 'Nanum' in f.name or ' 나눔' in f.name]
     
-    # 우선순위별 한글 폰트 후보군 (모바일/클라우드/윈도우/맥 통합)
-    candidates = [
-        'NanumGothic', 'Nanum Barun Gothic', 'Malgun Gothic', 
-        'AppleGothic', 'Apple SD Gothic Neo', 'DejaVu Sans'
-    ]
-    
-    selected_font = 'DejaVu Sans'
-    for font in candidates:
-        if font in font_list:
-            selected_font = font
-            break
-            
-    plt.rcParams['font.family'] = selected_font
+    if nanum_fonts:
+        plt.rcParams['font.family'] = nanum_fonts[0].name
+    else:
+        font_list = [f.name for f in fm.fontManager.ttflist]
+        candidates = [
+            'NanumGothic', 'Nanum Barun Gothic', 'Malgun Gothic', 
+            'AppleGothic', 'Apple SD Gothic Neo', 'DejaVu Sans'
+        ]
+        selected_font = 'DejaVu Sans'
+        for font in candidates:
+            if font in font_list:
+                selected_font = font
+                break
+        plt.rcParams['font.family'] = selected_font
+        
     plt.rcParams['axes.unicode_minus'] = False # 마이너스 기호 깨짐 방지
 
 set_korean_font()
@@ -72,7 +69,7 @@ def get_base_date(filename):
 
 base_date_display = get_base_date(file_path)
 
-# 4. 데이터 로드 및 전처리 함수
+# 4. 데이터 로드 및 전처리 함수 (사용부서 88: 매각완료, 77: 노후불용 처리중)
 @st.cache_data
 def load_data(path):
     df = pd.read_excel(path, sheet_name=0)
@@ -81,43 +78,94 @@ def load_data(path):
     df['사용부서_str'] = df['사용\n부서'].astype(str).str.strip()
     df = df[df['사용\n부서'].notna() & (df['사용부서_str'] != '') & (df['사용부서_str'].str.lower() != 'nan')].copy()
     
-    # 사용부서가 '88'인 경우 '매각완료'로 이름 변경
+    # 사용부서 코드별 이름 변경
     df.loc[df['사용부서_str'] == '88', '사용\n부서'] = '매각완료'
+    df.loc[df['사용부서_str'] == '77', '사용\n부서'] = '노후불용 처리중'
     
     # 등급분류 공란 처리 및 문자열 변환
     df['등급\n분류'] = df['등급\n분류'].fillna('해당무').astype(str).str.strip()
     df.loc[df['등급\n분류'] == '', '등급\n분류'] = '해당무'
     
+    # 취득가 결측치 처리 (숫자 변환 실패 시 0 처리)
+    df['취득가'] = pd.to_numeric(df['취득가'], errors='coerce').fillna(0)
+    
+    # 취득일자 기반 사용기간 기준 상태등급 계산 및 취득일자 없음 '납품대기' 처리
+    def calculate_period_grade(date_val):
+        try:
+            if pd.isna(date_val) or str(date_val).strip() == '' or str(date_val).lower() == 'nat' or str(date_val).lower() == 'nan':
+                return '납품대기'
+            
+            dt = pd.to_datetime(date_val)
+            if pd.isna(dt):
+                return '납품대기'
+                
+            today = datetime.today()
+            years = (today - dt).days / 365.25
+            
+            if years < 0:
+                return '납품대기'
+            elif years < 3:
+                return '가 (3년 이내)'
+            elif years < 7:
+                return '나 (3년~7년)'
+            elif years < 15:
+                return '다 (7년~15년)'
+            else:
+                return '라 (15년 이상)'
+        except Exception:
+            return '납품대기'
+
+    if '취득일자' in df.columns:
+        df['사용기간_등급'] = df['취득일자'].apply(calculate_period_grade)
+    else:
+        df['사용기간_등급'] = '납품대기'
+    
     return df
 
 raw_df = load_data(file_path)
 
-# 5. 사이드바 설정 및 '의용공학팀 개발 앱' 링크 추가
+# 5. 사이드바 설정 및 필터 옵션 추가
 st.sidebar.header("⚙️ 대시보드 필터 설정")
 st.sidebar.info(f"📂 **사용 중인 파일**:\n`{os.path.basename(file_path)}`")
 
-# 기본 선택은 '매각완료 제외' (체크 해제 상태)
+# 체크박스 필터들
 include_sold = st.sidebar.checkbox("매각완료 장비 포함하기", value=False, help="체크하면 매각완료(부서코드 88) 장비가 포함되어 조회됩니다.")
+include_obsolete = st.sidebar.checkbox("노후불용 처리중 장비 포함하기", value=True, help="체크 해제하면 노후불용 처리중(부서코드 77) 장비가 제외됩니다.")
+include_delivery_wait = st.sidebar.checkbox("납품대기(취득일자 없음) 장비 포함하기", value=True, help="체크 해제하면 취득일자가 없어 '납품대기'로 분류된 장비가 제외됩니다.")
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔗 의용공학팀 개발 앱")
 st.sidebar.markdown("1. [의료장비 투자집행 계획 실적](https://buly.kr/DEbvdwF)")
 st.sidebar.markdown("2. [의료장비 현황 바로가기](https://buly.kr/7mERs3u)")
 
-# 필터 적용
-if include_sold:
-    df = raw_df.copy()
-    filter_status_text = "매각완료 장비 포함"
-else:
-    df = raw_df[raw_df['사용\n부서'] != '매각완료'].copy()
-    filter_status_text = "매각완료 장비 제외 (기본값)"
+# 필터 적용 로직
+df = raw_df.copy()
+
+# 1) 매각완료 필터 적용
+if not include_sold:
+    df = df[df['사용\n부서'] != '매각완료'].copy()
+
+# 2) 노후불용 처리중 필터 적용
+if not include_obsolete:
+    df = df[df['사용\n부서'] != '노후불용 처리중'].copy()
+
+# 3) 납품대기(취득일자 없음) 필터 적용
+if not include_delivery_wait:
+    df = df[df['사용기간_등급'] != '납품대기'].copy()
+
+# 현재 적용된 필터 상태 텍스트 생성
+filter_status_desc = []
+filter_status_desc.append("매각완료 포함" if include_sold else "매각완료 제외")
+filter_status_desc.append("노후불용 포함" if include_obsolete else "노후불용 제외")
+filter_status_desc.append("납품대기 포함" if include_delivery_wait else "납품대기 제외")
+filter_status_text = " | ".join(filter_status_desc)
 
 # 6. 상단 타이틀 및 기준일 표시
 st.title("🏥 병원 의료장비 현황 대시보드")
 st.markdown(f"**📅 기준일:** {base_date_display} &nbsp;&nbsp;|&nbsp;&nbsp; **현재 필터:** {filter_status_text}")
 st.markdown("---")
 
-# 7. 상단 KPI 요약 카드 (모바일 반응형 CSS 적용)
+# 7. 상단 KPI 요약 카드 (모바일 반응형 CSS 및 줄임표 방지 적용)
 total_cost_thousand = df['취득가'].sum() / 1_000
 high_risk_count = len(df[df['등급\n분류'].astype(str).str.contains('3|4')])
 d_status_count = len(df[df['자산\n상태'] == 'D'])
@@ -188,15 +236,14 @@ kpi_html = f"""
 st.markdown(kpi_html, unsafe_allow_html=True)
 st.markdown("---")
 
-# 8. 메인 그래프 영역 (2단 컬럼 배치)
+# 8. 메인 그래프 영역 (1단: 자산 상태별 / 사용기간 기준 상태등급별)
 row1_col1, row1_col2 = st.columns(2)
 
 with row1_col1:
     st.subheader("📊 자산 상태별 현황")
     status_counts = df['자산\n상태'].value_counts()
     
-    # 폰트 렌더링 안정화를 위해 매번 그리기 전 폰트 설정 재확인
-    plt.rc('font', family=plt.rcParams['font.family'])
+    set_korean_font()
     fig1, ax1 = plt.subplots(figsize=(6, 4.5))
     
     def make_autopct(values):
@@ -230,6 +277,51 @@ with row1_col1:
             st.markdown(f"- **`{status}`등급**: {desc}")
 
 with row1_col2:
+    st.subheader("📊 사용기간 기준 상태등급 현황")
+    period_order = ['납품대기', '가 (3년 이내)', '나 (3년~7년)', '다 (7년~15년)', '라 (15년 이상)']
+    period_counts = df['사용기간_등급'].value_counts().reindex(period_order).fillna(0)
+    
+    set_korean_font()
+    fig_period, ax_period = plt.subplots(figsize=(6, 4.5))
+    barplot_obj = sns.barplot(x=period_counts.index, y=period_counts.values, ax=ax_period, palette='crest')
+    
+    # 막대 그래프 위에 수량(대수) 표시
+    for p in barplot_obj.patches:
+        height = p.get_height()
+        if height > 0:
+            ax_period.annotate(
+                f'{int(height):,}대',
+                (p.get_x() + p.get_width() / 2., height),
+                ha='center', va='bottom',
+                xytext=(0, 3),  
+                textcoords='offset points',
+                fontsize=10,
+                fontweight='bold'
+            )
+            
+    ax_period.set_ylabel("대수")
+    ax_period.set_xlabel("사용기간 등급")
+    
+    max_val = period_counts.max() if len(period_counts) > 0 else 1
+    ax_period.set_ylim(0, max_val * 1.15)
+    
+    plt.xticks(rotation=25)
+    st.pyplot(fig_period)
+    
+    with st.container():
+        st.markdown("**📋 사용기간 등급 기준 안내**")
+        st.markdown("- **납품대기**: 취득일자 정보가 없는 장비")
+        st.markdown("- **가등급**: 취득일 기준 3년 이내")
+        st.markdown("- **나등급**: 취득일 기준 3년 이상 ~ 7년 이내")
+        st.markdown("- **다등급**: 취득일 기준 7년 이상 ~ 15년 이내")
+        st.markdown("- **라등급**: 취득일 기준 15년 이상")
+
+st.markdown("")
+
+# 9. 메인 그래프 영역 (2단: 위험 등급별 / 부서별 장비 보유 TOP 10)
+row2_col1, row2_col2 = st.columns(2)
+
+with row2_col1:
     st.subheader("📊 위험 등급별 현황")
     grade_counts = df['등급\n분류'].value_counts()
     
@@ -245,51 +337,111 @@ with row1_col2:
     sorted_grades = sorted(grade_counts.index, key=grade_sort_key)
     grade_counts = grade_counts.reindex(sorted_grades).dropna()
     
-    plt.rc('font', family=plt.rcParams['font.family'])
+    set_korean_font()
     fig2, ax2 = plt.subplots(figsize=(6, 4.5))
-    sns.barplot(x=grade_counts.index, y=grade_counts.values, ax=ax2, palette='viridis')
+    barplot_grade2 = sns.barplot(x=grade_counts.index, y=grade_counts.values, ax=ax2, palette='viridis')
+    
+    # 세로 막대 그래프 위에 수량(대수) 표시
+    for p in barplot_grade2.patches:
+        height = p.get_height()
+        if height > 0:
+            ax2.annotate(
+                f'{int(height):,}대',
+                (p.get_x() + p.get_width() / 2., height),
+                ha='center', va='bottom',
+                xytext=(0, 3),  
+                textcoords='offset points',
+                fontsize=10,
+                fontweight='bold'
+            )
+            
     ax2.set_ylabel("대수")
     ax2.set_xlabel("등급")
+    
+    max_grade2 = grade_counts.max() if len(grade_counts) > 0 else 1
+    ax2.set_ylim(0, max_grade2 * 1.15)
+    
     plt.xticks(rotation=45)
     st.pyplot(fig2)
     
-    grade_df = pd.DataFrame({
-        '등급분류': grade_counts.index,
-        '대수': [f"{val:,} 대" for val in grade_counts.values]
-    })
+    with st.container():
+        st.markdown("💡 **팁:** 의료장비의 위험도 등급별 장비 분포 현황을 보여줍니다.")
+
+with row2_col2:
+    st.subheader("📊 부서별 장비 보유 TOP 10 (대수 기준)")
+    dept_counts = df['사용\n부서'].value_counts().head(10)
+    
+    set_korean_font()
+    fig3, ax3 = plt.subplots(figsize=(6, 4.5))
+    barplot_dept3 = sns.barplot(y=dept_counts.index, x=dept_counts.values, ax=ax3, palette='mako', orient='h')
+    
+    # 가로 막대 그래프 오른쪽 끝에 수량(대수) 표시
+    for p in barplot_dept3.patches:
+        width = p.get_width()
+        if width > 0:
+            ax3.annotate(
+                f'{int(width):,}대',
+                (width, p.get_y() + p.get_height() / 2.),
+                ha='left', va='center',
+                xytext=(5, 0),  
+                textcoords='offset points',
+                fontsize=9,
+                fontweight='bold'
+            )
+            
+    ax3.set_xlabel("장비 대수")
+    ax3.set_ylabel("부서명")
+    
+    max_dept3 = dept_counts.max() if len(dept_counts) > 0 else 1
+    ax3.set_xlim(0, max_dept3 * 1.2)
+    
+    st.pyplot(fig3)
     
     with st.container():
-        st.markdown("**📋 위험 등급 상세 보기**")
-        st.dataframe(grade_df, hide_index=True)
+        st.markdown("💡 **팁:** 부서별 장비 대수 상위 10개 부서의 현황을 보여줍니다.")
 
 st.markdown("")
 
-row2_col1, row2_col2 = st.columns(2)
+# 10. 메인 그래프 영역 (3단: 부서별 취득가 합계 TOP 10)
+row3_col1, row3_col2 = st.columns(2)
 
-with row2_col1:
-    st.subheader("📊 부서별 장비 보유 TOP 10")
-    dept_counts = df['사용\n부서'].value_counts().head(10)
+with row3_col1:
+    st.subheader("📊 부서별 취득가 합계 TOP 10 (금액 기준)")
+    dept_cost_sum = df.groupby('사용\n부서')['취득가'].sum().sort_values(ascending=False).head(10) / 1_000
     
-    plt.rc('font', family=plt.rcParams['font.family'])
-    fig3, ax3 = plt.subplots(figsize=(6, 4.5))
-    sns.barplot(y=dept_counts.index, x=dept_counts.values, ax=ax3, palette='mako', orient='h')
-    ax3.set_xlabel("장비 대수")
-    ax3.set_ylabel("부서명")
-    st.pyplot(fig3)
+    set_korean_font()
+    fig4, ax4 = plt.subplots(figsize=(6, 4.5))
+    barplot_dept4 = sns.barplot(y=dept_cost_sum.index, x=dept_cost_sum.values, ax=ax4, palette='rocket', orient='h')
     
-    dept_df = pd.DataFrame({
-        '사용부서': dept_counts.index,
-        '대수': [f"{val:,} 대" for val in dept_counts.values]
-    })
+    # 가로 막대 그래프 오른쪽 끝에 금액 표시
+    for p in barplot_dept4.patches:
+        width = p.get_width()
+        if width > 0:
+            ax4.annotate(
+                f'{width:,.1f}천원',
+                (width, p.get_y() + p.get_height() / 2.),
+                ha='left', va='center',
+                xytext=(5, 0),  
+                textcoords='offset points',
+                fontsize=9,
+                fontweight='bold'
+            )
+            
+    ax4.set_xlabel("취득가 합계 (천원)")
+    ax4.set_ylabel("부서명")
+    
+    max_dept4 = dept_cost_sum.max() if len(dept_cost_sum) > 0 else 1
+    ax4.set_xlim(0, max_dept4 * 1.25)
+    
+    st.pyplot(fig4)
     
     with st.container():
-        st.markdown("**📋 부서별 상세 보기**")
-        st.dataframe(dept_df, hide_index=True)
+        st.markdown("💡 **팁:** 부서별 장비 취득가 합계 상위 10개 부서의 현황을 보여줍니다.")
 
-with row2_col2:
-    st.info("💡 **팁:** 상단 사이드바의 '매각완료 장비 포함하기' 옵션을 체크하거나 해제하여 전체 장비 현황을 유연하게 비교해 보세요.")
+with row3_col2:
+    st.info("💡 **팁:** 상단 사이드바의 필터 옵션을 활용하여 매각완료, 노후불용 및 납품대기 장비를 유연하게 포함하거나 제외해 보세요.")
 
-# 9. 하단 장비 상세 데이터 목록 (기본 노출 및 검색 기능)
+# 11. 하단 장비 상세 데이터 목록 (기본 노출 및 검색 기능)
 st.markdown("---")
 st.subheader("🔍 장비 상세 데이터 목록")
 search_query = st.text_input("검색어 입력 (장비명, 모델명, 부서명 등):", "")
@@ -302,8 +454,11 @@ else:
     display_target_df = df.copy()
     st.write(f"전체 목록: {len(display_target_df):,} 대")
 
-# 취득가 천원 단위 변환 및 천 단위 콤마 포맷팅 적용
-display_df = display_target_df[['관리번호', '장비명/구성품명', '사용\n부서', '자산\n상태', '등급\n분류', '취득가']].copy()
+# 취득가 천원 단위 변환 및 천 단위 콤마 포맷팅 적용 (사용기간 등급 포함)
+display_cols = ['관리번호', '장비명/구성품명', '사용\n부서', '자산\n상태', '등급\n분류', '사용기간_등급', '취득가']
+existing_display_cols = [c for c in display_cols if c in display_target_df.columns]
+
+display_df = display_target_df[existing_display_cols].copy()
 display_df['취득가(천원)'] = (display_df['취득가'] / 1_000).round(1).apply(lambda x: f"{x:,.1f}")
 display_df = display_df.drop(columns=['취득가'])
 
