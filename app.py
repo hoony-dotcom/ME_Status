@@ -7,8 +7,13 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import seaborn as sns
 
-# 1. 페이지 설정
-st.set_page_config(page_title="의료장비 현황 대시보드", page_icon="🏥", layout="wide")
+# 1. 페이지 설정 (모바일 대응을 위해 initial_sidebar_state 등 설정)
+st.set_page_config(
+    page_title="의료장비 현황 대시보드", 
+    page_icon="🏥", 
+    layout="wide",
+    initial_sidebar_state="auto"
+)
 
 # 운영체제별 한글 폰트 설정 (폰트 깨짐 방지)
 def set_korean_font():
@@ -101,7 +106,7 @@ st.title("🏥 병원 의료장비 현황 대시보드")
 st.markdown(f"**📅 기준일:** {base_date_display} &nbsp;&nbsp;|&nbsp;&nbsp; **현재 필터:** {filter_status_text}")
 st.markdown("---")
 
-# 7. 상단 KPI 요약 카드 (줄임표 방지 및 자연스러운 줄바꿈 적용 HTML/CSS)
+# 7. 상단 KPI 요약 카드 (모바일 반응형 CSS 적용)
 total_cost_thousand = df['취득가'].sum() / 1_000
 high_risk_count = len(df[df['등급\n분류'].astype(str).str.contains('3|4')])
 d_status_count = len(df[df['자산\n상태'] == 'D'])
@@ -111,31 +116,41 @@ kpi_html = f"""
 .kpi-container {{
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 12px;
     margin-bottom: 20px;
 }}
 .kpi-card {{
     flex: 1;
-    min-width: 200px;
+    min-width: 160px;
     background-color: #f8f9fa;
     border: 1px solid #e9ecef;
     border-radius: 8px;
-    padding: 15px 20px;
+    padding: 14px 16px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }}
 .kpi-label {{
-    font-size: 14px;
+    font-size: 13px;
     color: #6c757d;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     word-break: keep-all;
 }}
 .kpi-value {{
-    font-size: 24px;
+    font-size: 22px;
     color: #212529;
     font-weight: bold;
     word-break: break-all;
     line-height: 1.3;
+}}
+
+/* 모바일 화면(폭 768px 이하)에서 카드 크기 조정 */
+@media (max-width: 768px) {{
+    .kpi-card {{
+        min-width: 100%;
+    }}
+    .kpi-value {{
+        font-size: 20px;
+    }}
 }}
 </style>
 
@@ -162,7 +177,7 @@ kpi_html = f"""
 st.markdown(kpi_html, unsafe_allow_html=True)
 st.markdown("---")
 
-# 8. 메인 그래프 영역 (2단 컬럼 배치)
+# 8. 메인 그래프 영역 (2단 컬럼 배치 - Streamlit은 모바일에서 자동으로 수직 스택으로 전환됨)
 row1_col1, row1_col2 = st.columns(2)
 
 with row1_col1:
