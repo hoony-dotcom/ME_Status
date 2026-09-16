@@ -76,12 +76,17 @@ def load_data(path):
 
 raw_df = load_data(file_path)
 
-# 5. 사이드바 필터 설정
+# 5. 사이드바 설정 및 '의용공학팀 개발 앱' 링크 추가
 st.sidebar.header("⚙️ 대시보드 필터 설정")
 st.sidebar.info(f"📂 **사용 중인 파일**:\n`{os.path.basename(file_path)}`")
 
 # 기본 선택은 '매각완료 제외' (체크 해제 상태)
 include_sold = st.sidebar.checkbox("매각완료 장비 포함하기", value=False, help="체크하면 매각완료(부서코드 88) 장비가 포함되어 조회됩니다.")
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔗 의용공학팀 개발 앱")
+st.sidebar.markdown("1. [의료장비 투자집행 계획 실적](https://buly.kr/DEbvdwF)")
+st.sidebar.markdown("2. [의료장비 현황 바로가기](https://buly.kr/7mERs3u)")
 
 # 필터 적용
 if include_sold:
@@ -91,24 +96,8 @@ else:
     df = raw_df[raw_df['사용\n부서'] != '매각완료'].copy()
     filter_status_text = "매각완료 장비 제외 (기본값)"
 
-# 6. 상단 타이틀 및 관련 링크 영역 (의용공학팀 연결앱)
-st.title("🔗 의용공학팀 연결앱")
-st.markdown("병원 의료장비 관리 및 관련 계획 실적 연동 페이지입니다.")
-
-# 외부 링크 버튼 배치
-st.markdown(
-    """
-    <a href="https://buly.kr/DEbvdwF" target="_blank">
-        <button style="background-color:#4CAF50; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; font-size:16px; font-weight:bold;">
-            📈 의료장비 투자집행 계획 실적 바로가기
-        </button>
-    </a>
-    """,
-    unsafe_allow_html=True
-)
-
-st.markdown("")
-st.subheader("🏥 병원 의료장비 현황 대시보드")
+# 6. 상단 타이틀 및 기준일 표시
+st.title("🏥 병원 의료장비 현황 대시보드")
 st.markdown(f"**📅 기준일:** {base_date_display} &nbsp;&nbsp;|&nbsp;&nbsp; **현재 필터:** {filter_status_text}")
 st.markdown("---")
 
