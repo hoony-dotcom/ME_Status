@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import seaborn as sns
 
-# 1. 페이지 설정 (모바일 대응을 위해 initial_sidebar_state 등 설정)
+# 1. 페이지 설정
 st.set_page_config(
     page_title="의료장비 현황 대시보드", 
     page_icon="🏥", 
@@ -15,10 +15,21 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# 운영체제별 한글 폰트 설정 (폰트 깨짐 방지)
+# 운영체제별 및 모바일 환경 고려한 강력한 한글 폰트 설정 함수
 def set_korean_font():
+    # matplotlib 폰트 캐시 리셋
+    try:
+        fm._rebuild()
+    except AttributeError:
+        pass
+
     font_list = [f.name for f in fm.fontManager.ttflist]
-    candidates = ['Malgun Gothic', 'AppleGothic', 'NanumGothic', 'Nanum Barun Gothic', 'DejaVu Sans']
+    
+    # 우선순위별 한글 폰트 후보군 (모바일/클라우드/윈도우/맥 통합)
+    candidates = [
+        'NanumGothic', 'Nanum Barun Gothic', 'Malgun Gothic', 
+        'AppleGothic', 'Apple SD Gothic Neo', 'DejaVu Sans'
+    ]
     
     selected_font = 'DejaVu Sans'
     for font in candidates:
@@ -27,7 +38,7 @@ def set_korean_font():
             break
             
     plt.rcParams['font.family'] = selected_font
-    plt.rcParams['axes.unicode_minus'] = False
+    plt.rcParams['axes.unicode_minus'] = False # 마이너스 기호 깨짐 방지
 
 set_korean_font()
 
@@ -177,13 +188,15 @@ kpi_html = f"""
 st.markdown(kpi_html, unsafe_allow_html=True)
 st.markdown("---")
 
-# 8. 메인 그래프 영역 (2단 컬럼 배치 - Streamlit은 모바일에서 자동으로 수직 스택으로 전환됨)
+# 8. 메인 그래프 영역 (2단 컬럼 배치)
 row1_col1, row1_col2 = st.columns(2)
 
 with row1_col1:
     st.subheader("📊 자산 상태별 현황")
     status_counts = df['자산\n상태'].value_counts()
     
+    # 폰트 렌더링 안정화를 위해 매번 그리기 전 폰트 설정 재확인
+    plt.rc('font', family=plt.rcParams['font.family'])
     fig1, ax1 = plt.subplots(figsize=(6, 4.5))
     
     def make_autopct(values):
@@ -232,6 +245,7 @@ with row1_col2:
     sorted_grades = sorted(grade_counts.index, key=grade_sort_key)
     grade_counts = grade_counts.reindex(sorted_grades).dropna()
     
+    plt.rc('font', family=plt.rcParams['font.family'])
     fig2, ax2 = plt.subplots(figsize=(6, 4.5))
     sns.barplot(x=grade_counts.index, y=grade_counts.values, ax=ax2, palette='viridis')
     ax2.set_ylabel("대수")
@@ -256,6 +270,7 @@ with row2_col1:
     st.subheader("📊 부서별 장비 보유 TOP 10")
     dept_counts = df['사용\n부서'].value_counts().head(10)
     
+    plt.rc('font', family=plt.rcParams['font.family'])
     fig3, ax3 = plt.subplots(figsize=(6, 4.5))
     sns.barplot(y=dept_counts.index, x=dept_counts.values, ax=ax3, palette='mako', orient='h')
     ax3.set_xlabel("장비 대수")
