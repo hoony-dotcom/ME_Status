@@ -17,8 +17,8 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# 다크모드/라이트모드 감지 및 matplotlib 테마 자동 대응 설정
-def set_korean_font_and_theme():
+# 한글 폰트 설정 및 기본 rcParams 설정
+def set_korean_font():
     font_list = [f.name for f in fm.fontManager.ttflist]
     candidates = [
         'NanumGothic', 'Nanum Barun Gothic', 'NanumSquare', 
@@ -40,16 +40,10 @@ def set_korean_font_and_theme():
         plt.rcParams['font.family'] = 'sans-serif'
         
     plt.rcParams['axes.unicode_minus'] = False
-    
-    # 테마별 시인성 확보를 위한 설정 (투명 배경 및 기본 글자색 조정)
     plt.rcParams['figure.facecolor'] = 'none'
     plt.rcParams['axes.facecolor'] = 'none'
-    plt.rcParams['text.color'] = 'inherit'
-    plt.rcParams['axes.labelcolor'] = 'inherit'
-    plt.rcParams['xtick.color'] = 'inherit'
-    plt.rcParams['ytick.color'] = 'inherit'
 
-set_korean_font_and_theme()
+set_korean_font()
 
 # 2. 폴더 내에서 가장 최신의 '의료기기 현황조회' 엑셀 파일 자동 탐색 함수
 def get_latest_excel_file():
@@ -167,6 +161,11 @@ filter_status_text = " | ".join(filter_status_desc)
 
 total_count_for_ratio = len(df) if len(df) > 0 else 1
 
+# 전체 총 취득가 (천원 단위) 계산
+total_cost_sum_grand = df['취득가'].sum() / 1_000
+if total_cost_sum_grand <= 0:
+    total_cost_sum_grand = 1.0
+
 # 6. 상단 타이틀 및 기준일 표시
 st.title("🏥 병원 의료장비 현황 대시보드")
 st.markdown(f"**📅 기준일:** {base_date_display} &nbsp;&nbsp;|&nbsp;&nbsp; **현재 필터:** {filter_status_text}")
@@ -248,7 +247,6 @@ with row1_col1:
     st.subheader("📊 자산 상태별 현황")
     status_counts = df['자산\n상태'].value_counts()
     
-    set_korean_font_and_theme()
     fig1, ax1 = plt.subplots(figsize=(6, 4.5))
     
     def make_autopct(values):
@@ -290,11 +288,9 @@ with row1_col2:
     period_order = ['납품대기', '가 (3년 이내)', '나 (3년~7년)', '다 (7년~15년)', '라 (15년 이상)']
     period_counts = df['사용기간_등급'].value_counts().reindex(period_order).fillna(0)
     
-    set_korean_font_and_theme()
     fig_period, ax_period = plt.subplots(figsize=(6, 4.5))
     barplot_obj = sns.barplot(x=period_counts.index, y=period_counts.values, ax=ax_period, palette='crest')
     
-    # 대수 및 비율 표시
     for p in barplot_obj.patches:
         height = p.get_height()
         if height > 0:
@@ -347,11 +343,9 @@ with row2_col1:
     sorted_grades = sorted(grade_counts.index, key=grade_sort_key)
     grade_counts = grade_counts.reindex(sorted_grades).dropna()
     
-    set_korean_font_and_theme()
     fig2, ax2 = plt.subplots(figsize=(6, 4.5))
     barplot_grade2 = sns.barplot(x=grade_counts.index, y=grade_counts.values, ax=ax2, palette='viridis')
     
-    # 대수 및 비율 표시
     for p in barplot_grade2.patches:
         height = p.get_height()
         if height > 0:
@@ -382,11 +376,9 @@ with row2_col2:
     st.subheader("📊 부서별 장비 보유 TOP 10 (대수 기준)")
     dept_counts = df['사용\n부서'].value_counts().head(10)
     
-    set_korean_font_and_theme()
     fig3, ax3 = plt.subplots(figsize=(6, 4.5))
     barplot_dept3 = sns.barplot(y=dept_counts.index, x=dept_counts.values, ax=ax3, palette='mako', orient='h')
     
-    # 대수 및 비율 표시
     for p in barplot_dept3.patches:
         width = p.get_width()
         if width > 0:
@@ -420,16 +412,15 @@ row3_col1, row3_col2 = st.columns(2)
 with row3_col1:
     st.subheader("📊 부서별 취득가 합계 TOP 10 (금액 기준)")
     dept_cost_sum = df.groupby('사용\n부서')['취득가'].sum().sort_values(ascending=False).head(10) / 1_000
-    total_cost_sum_all = dept_cost_sum.sum() if dept_cost_sum.sum() > 0 else 1
     
-    set_korean_font_and_theme()
     fig4, ax4 = plt.subplots(figsize=(6, 4.5))
     barplot_dept4 = sns.barplot(y=dept_cost_sum.index, x=dept_cost_sum.values, ax=ax4, palette='rocket', orient='h')
     
+    # 총 취득가(total_cost_sum_grand)를 기준으로 비율 계산
     for p in barplot_dept4.patches:
         width = p.get_width()
         if width > 0:
-            pct_val = (width / total_cost_sum_all) * 100
+            pct_val = (width / total_cost_sum_grand) * 100
             ax4.annotate(
                 f'{width:,.1f}천원 ({pct_val:.1f}%)',
                 (width, p.get_y() + p.get_height() / 2.),
