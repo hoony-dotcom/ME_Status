@@ -41,13 +41,12 @@ def set_korean_font():
         
     plt.rcParams['axes.unicode_minus'] = False
     
-    # [핵심 수정] 그래프 내부 및 전체 배경색을 어두운 검은색 계열(#1E1E1E)으로 고정
+    # 그래프 내부 및 전체 배경색을 어두운 검은색 계열(#1E1E1E)으로 고정
     plt.rcParams['figure.facecolor'] = '#1E1E1E'
     plt.rcParams['axes.facecolor'] = '#1E1E1E'
 
 set_korean_font()
 
-# 라이트/다크모드 구분에 상관없이 배경이 검정이므로 글자와 축은 모두 밝은 흰색/회색으로 고정
 current_text_color = '#FFFFFF'  
 current_axis_color = '#E0E0E0'  
 
@@ -96,6 +95,10 @@ def load_data(path):
     df.loc[df['등급\n분류'] == '', '등급\n분류'] = '해당무'
     
     df['취득가'] = pd.to_numeric(df['취득가'], errors='coerce').fillna(0)
+    
+    # 의공담당 결측치 처리
+    df['의공담당'] = df['의공담당'].fillna('미지정').astype(str).str.strip()
+    df.loc[df['의공담당'] == '', '의공담당'] = '미지정'
     
     def calculate_period_grade(date_val):
         try:
@@ -269,7 +272,7 @@ with row1_col1:
         labels=status_counts.index, 
         autopct=make_autopct(status_counts.values), 
         startangle=90, 
-        colors=sns.color_palette('pastel')
+        colors=sns.color_palette('Pastel1')
     )
     
     for t in texts:
@@ -283,6 +286,7 @@ with row1_col1:
         at.set_weight('bold')
         
     ax1.axis('equal')
+    fig1.tight_layout()
     st.pyplot(fig1)
     
     status_desc_map = {
@@ -307,7 +311,7 @@ with row1_col2:
     fig_period.patch.set_facecolor('#1E1E1E')
     ax_period.set_facecolor('#1E1E1E')
     
-    barplot_obj = sns.barplot(x=period_counts.index, y=period_counts.values, ax=ax_period, palette='crest')
+    barplot_obj = sns.barplot(x=period_counts.index, y=period_counts.values, ax=ax_period, palette='Set2')
     
     for p in barplot_obj.patches:
         height = p.get_height()
@@ -336,6 +340,7 @@ with row1_col2:
     
     plt.xticks(rotation=25, color=current_axis_color)
     plt.yticks(color=current_axis_color)
+    fig_period.tight_layout()
     st.pyplot(fig_period)
     
     with st.container():
@@ -371,7 +376,7 @@ with row2_col1:
     fig2.patch.set_facecolor('#1E1E1E')
     ax2.set_facecolor('#1E1E1E')
     
-    barplot_grade2 = sns.barplot(x=grade_counts.index, y=grade_counts.values, ax=ax2, palette='viridis')
+    barplot_grade2 = sns.barplot(x=grade_counts.index, y=grade_counts.values, ax=ax2, palette='Pastel2')
     
     for p in barplot_grade2.patches:
         height = p.get_height()
@@ -399,6 +404,7 @@ with row2_col1:
     
     plt.xticks(rotation=45, color=current_axis_color)
     plt.yticks(color=current_axis_color)
+    fig2.tight_layout()
     st.pyplot(fig2)
     
     with st.container():
@@ -412,7 +418,7 @@ with row2_col2:
     fig3.patch.set_facecolor('#1E1E1E')
     ax3.set_facecolor('#1E1E1E')
     
-    barplot_dept3 = sns.barplot(y=dept_counts.index, x=dept_counts.values, ax=ax3, palette='mako', orient='h')
+    barplot_dept3 = sns.barplot(y=dept_counts.index, x=dept_counts.values, ax=ax3, palette='pastel', orient='h')
     
     for p in barplot_dept3.patches:
         width = p.get_width()
@@ -436,10 +442,11 @@ with row2_col2:
     ax3.yaxis.label.set_color(current_axis_color)
     
     max_dept3 = dept_counts.max() if len(dept_counts) > 0 else 1
-    ax3.set_xlim(0, max_dept3 * 1.3)
+    ax3.set_xlim(0, max_dept3 * 1.35)
     
     plt.xticks(color=current_axis_color)
     plt.yticks(color=current_axis_color)
+    fig3.tight_layout()
     st.pyplot(fig3)
     
     with st.container():
@@ -447,7 +454,7 @@ with row2_col2:
 
 st.markdown("")
 
-# 10. 메인 그래프 영역 (3단: 부서별 취득가 합계 TOP 10)
+# 10. 메인 그래프 영역 (3단: 부서별 취득가 합계 TOP 10 / 의용공학팀 팀원 별 관리 대수 현황)
 row3_col1, row3_col2 = st.columns(2)
 
 with row3_col1:
@@ -458,7 +465,7 @@ with row3_col1:
     fig4.patch.set_facecolor('#1E1E1E')
     ax4.set_facecolor('#1E1E1E')
     
-    barplot_dept4 = sns.barplot(y=dept_cost_sum.index, x=dept_cost_sum.values, ax=ax4, palette='rocket', orient='h')
+    barplot_dept4 = sns.barplot(y=dept_cost_sum.index, x=dept_cost_sum.values, ax=ax4, palette='Set3', orient='h')
     
     for p in barplot_dept4.patches:
         width = p.get_width()
@@ -482,17 +489,57 @@ with row3_col1:
     ax4.yaxis.label.set_color(current_axis_color)
     
     max_dept4 = dept_cost_sum.max() if len(dept_cost_sum) > 0 else 1
-    ax4.set_xlim(0, max_dept4 * 1.35)
+    ax4.set_xlim(0, max_dept4 * 1.4)
     
     plt.xticks(color=current_axis_color)
     plt.yticks(color=current_axis_color)
+    fig4.tight_layout()
     st.pyplot(fig4)
     
     with st.container():
         st.markdown("💡 **팁:** 부서별 장비 취득가 합계 상위 10개 부서의 현황을 보여줍니다.")
 
 with row3_col2:
-    st.info("💡 **팁:** 상단 사이드바의 필터 옵션을 활용하여 매각완료, 노후불용 및 납품대기 장비를 유연하게 포함하거나 제외해 보세요.")
+    st.subheader("📊 의용공학팀 팀원 별 관리 대수 현황")
+    handler_counts = df['의공담당'].value_counts()
+    
+    fig_handler, ax_handler = plt.subplots(figsize=(6, 4.5))
+    fig_handler.patch.set_facecolor('#1E1E1E')
+    ax_handler.set_facecolor('#1E1E1E')
+    
+    barplot_handler = sns.barplot(y=handler_counts.index, x=handler_counts.values, ax=ax_handler, palette='spring', orient='h')
+    
+    for p in barplot_handler.patches:
+        width = p.get_width()
+        if width > 0:
+            pct_val = (width / total_count_for_ratio) * 100
+            ax_handler.annotate(
+                f'{int(width):,}대 ({pct_val:.1f}%)',
+                (width, p.get_y() + p.get_height() / 2.),
+                ha='left', va='center',
+                xytext=(5, 0),  
+                textcoords='offset points',
+                fontsize=9,
+                fontweight='bold',
+                color=current_text_color
+            )
+            
+    ax_handler.set_xlabel("장비 대수", color=current_axis_color, fontweight='bold')
+    ax_handler.set_ylabel("담당자", color=current_axis_color, fontweight='bold')
+    ax_handler.tick_params(colors=current_axis_color, labelsize=9)
+    ax_handler.xaxis.label.set_color(current_axis_color)
+    ax_handler.yaxis.label.set_color(current_axis_color)
+    
+    max_handler = handler_counts.max() if len(handler_counts) > 0 else 1
+    ax_handler.set_xlim(0, max_handler * 1.35)
+    
+    plt.xticks(color=current_axis_color)
+    plt.yticks(color=current_axis_color)
+    fig_handler.tight_layout()
+    st.pyplot(fig_handler)
+    
+    with st.container():
+        st.markdown("💡 **팁:** 의용공학팀 팀원별 담당 장비 수량 및 비율을 보여줍니다.")
 
 # 11. 하단 장비 상세 데이터 목록 (기본 노출 및 검색 기능)
 st.markdown("---")
