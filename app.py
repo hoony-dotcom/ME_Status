@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# 한글 폰트 및 다크모드 대응 텍스트/축 색상 설정
+# 한글 폰트 설정 및 그래프 배경을 검은색 계열로 고정
 def set_korean_font():
     font_list = [f.name for f in fm.fontManager.ttflist]
     candidates = [
@@ -40,14 +40,16 @@ def set_korean_font():
         plt.rcParams['font.family'] = 'sans-serif'
         
     plt.rcParams['axes.unicode_minus'] = False
-    plt.rcParams['figure.facecolor'] = 'none'
-    plt.rcParams['axes.facecolor'] = 'none'
-    plt.rcParams['text.color'] = '#555555'
-    plt.rcParams['axes.labelcolor'] = '#555555'
-    plt.rcParams['xtick.color'] = '#555555'
-    plt.rcParams['ytick.color'] = '#555555'
+    
+    # [핵심 수정] 그래프 내부 및 전체 배경색을 어두운 검은색 계열(#1E1E1E)으로 고정
+    plt.rcParams['figure.facecolor'] = '#1E1E1E'
+    plt.rcParams['axes.facecolor'] = '#1E1E1E'
 
 set_korean_font()
+
+# 라이트/다크모드 구분에 상관없이 배경이 검정이므로 글자와 축은 모두 밝은 흰색/회색으로 고정
+current_text_color = '#FFFFFF'  
+current_axis_color = '#E0E0E0'  
 
 # 2. 폴더 내에서 가장 최신의 '의료기기 현황조회' 엑셀 파일 자동 탐색 함수
 def get_latest_excel_file():
@@ -252,6 +254,8 @@ with row1_col1:
     status_counts = df['자산\n상태'].value_counts()
     
     fig1, ax1 = plt.subplots(figsize=(6, 4.5))
+    fig1.patch.set_facecolor('#1E1E1E')
+    ax1.set_facecolor('#1E1E1E')
     
     def make_autopct(values):
         def my_autopct(pct):
@@ -268,10 +272,15 @@ with row1_col1:
         colors=sns.color_palette('pastel')
     )
     
-    # 파이차트 글자 색상 명시 (다크모드 가시성 확보)
-    for t in texts + autotexts:
+    for t in texts:
         t.set_fontsize(10)
-        t.set_color('#333333')
+        t.set_color(current_axis_color)
+        t.set_weight('bold')
+        
+    for at in autotexts:
+        at.set_fontsize(10)
+        at.set_color(current_text_color)
+        at.set_weight('bold')
         
     ax1.axis('equal')
     st.pyplot(fig1)
@@ -295,6 +304,9 @@ with row1_col2:
     period_counts = df['사용기간_등급'].value_counts().reindex(period_order).fillna(0)
     
     fig_period, ax_period = plt.subplots(figsize=(6, 4.5))
+    fig_period.patch.set_facecolor('#1E1E1E')
+    ax_period.set_facecolor('#1E1E1E')
+    
     barplot_obj = sns.barplot(x=period_counts.index, y=period_counts.values, ax=ax_period, palette='crest')
     
     for p in barplot_obj.patches:
@@ -309,20 +321,21 @@ with row1_col2:
                 textcoords='offset points',
                 fontsize=9,
                 fontweight='bold',
-                color='#333333'
+                color=current_text_color
             )
             
-    ax_period.set_ylabel("대수")
-    ax_period.set_xlabel("사용기간 등급")
+    ax_period.set_ylabel("대수", color=current_axis_color, fontweight='bold')
+    ax_period.set_xlabel("사용기간 등급", color=current_axis_color, fontweight='bold')
     
-    ax_period.tick_params(colors='#555555', labelsize=9)
-    ax_period.xaxis.label.set_color('#555555')
-    ax_period.yaxis.label.set_color('#555555')
+    ax_period.tick_params(colors=current_axis_color, labelsize=9)
+    ax_period.xaxis.label.set_color(current_axis_color)
+    ax_period.yaxis.label.set_color(current_axis_color)
     
     max_val = period_counts.max() if len(period_counts) > 0 else 1
     ax_period.set_ylim(0, max_val * 1.25)
     
-    plt.xticks(rotation=25)
+    plt.xticks(rotation=25, color=current_axis_color)
+    plt.yticks(color=current_axis_color)
     st.pyplot(fig_period)
     
     with st.container():
@@ -355,6 +368,9 @@ with row2_col1:
     grade_counts = grade_counts.reindex(sorted_grades).dropna()
     
     fig2, ax2 = plt.subplots(figsize=(6, 4.5))
+    fig2.patch.set_facecolor('#1E1E1E')
+    ax2.set_facecolor('#1E1E1E')
+    
     barplot_grade2 = sns.barplot(x=grade_counts.index, y=grade_counts.values, ax=ax2, palette='viridis')
     
     for p in barplot_grade2.patches:
@@ -369,19 +385,20 @@ with row2_col1:
                 textcoords='offset points',
                 fontsize=9,
                 fontweight='bold',
-                color='#333333'
+                color=current_text_color
             )
             
-    ax2.set_ylabel("대수")
-    ax2.set_xlabel("등급")
-    ax2.tick_params(colors='#555555', labelsize=9)
-    ax2.xaxis.label.set_color('#555555')
-    ax2.yaxis.label.set_color('#555555')
+    ax2.set_ylabel("대수", color=current_axis_color, fontweight='bold')
+    ax2.set_xlabel("등급", color=current_axis_color, fontweight='bold')
+    ax2.tick_params(colors=current_axis_color, labelsize=9)
+    ax2.xaxis.label.set_color(current_axis_color)
+    ax2.yaxis.label.set_color(current_axis_color)
     
     max_grade2 = grade_counts.max() if len(grade_counts) > 0 else 1
     ax2.set_ylim(0, max_grade2 * 1.25)
     
-    plt.xticks(rotation=45)
+    plt.xticks(rotation=45, color=current_axis_color)
+    plt.yticks(color=current_axis_color)
     st.pyplot(fig2)
     
     with st.container():
@@ -392,6 +409,9 @@ with row2_col2:
     dept_counts = df['사용\n부서'].value_counts().head(10)
     
     fig3, ax3 = plt.subplots(figsize=(6, 4.5))
+    fig3.patch.set_facecolor('#1E1E1E')
+    ax3.set_facecolor('#1E1E1E')
+    
     barplot_dept3 = sns.barplot(y=dept_counts.index, x=dept_counts.values, ax=ax3, palette='mako', orient='h')
     
     for p in barplot_dept3.patches:
@@ -406,18 +426,20 @@ with row2_col2:
                 textcoords='offset points',
                 fontsize=9,
                 fontweight='bold',
-                color='#333333'
+                color=current_text_color
             )
             
-    ax3.set_xlabel("장비 대수")
-    ax3.set_ylabel("부서명")
-    ax3.tick_params(colors='#555555', labelsize=9)
-    ax3.xaxis.label.set_color('#555555')
-    ax3.yaxis.label.set_color('#555555')
+    ax3.set_xlabel("장비 대수", color=current_axis_color, fontweight='bold')
+    ax3.set_ylabel("부서명", color=current_axis_color, fontweight='bold')
+    ax3.tick_params(colors=current_axis_color, labelsize=9)
+    ax3.xaxis.label.set_color(current_axis_color)
+    ax3.yaxis.label.set_color(current_axis_color)
     
     max_dept3 = dept_counts.max() if len(dept_counts) > 0 else 1
     ax3.set_xlim(0, max_dept3 * 1.3)
     
+    plt.xticks(color=current_axis_color)
+    plt.yticks(color=current_axis_color)
     st.pyplot(fig3)
     
     with st.container():
@@ -433,6 +455,9 @@ with row3_col1:
     dept_cost_sum = df.groupby('사용\n부서')['취득가'].sum().sort_values(ascending=False).head(10) / 1_000
     
     fig4, ax4 = plt.subplots(figsize=(6, 4.5))
+    fig4.patch.set_facecolor('#1E1E1E')
+    ax4.set_facecolor('#1E1E1E')
+    
     barplot_dept4 = sns.barplot(y=dept_cost_sum.index, x=dept_cost_sum.values, ax=ax4, palette='rocket', orient='h')
     
     for p in barplot_dept4.patches:
@@ -447,18 +472,20 @@ with row3_col1:
                 textcoords='offset points',
                 fontsize=8.5,
                 fontweight='bold',
-                color='#333333'
+                color=current_text_color
             )
             
-    ax4.set_xlabel("취득가 합계 (천원)")
-    ax4.set_ylabel("부서명")
-    ax4.tick_params(colors='#555555', labelsize=9)
-    ax4.xaxis.label.set_color('#555555')
-    ax4.yaxis.label.set_color('#555555')
+    ax4.set_xlabel("취득가 합계 (천원)", color=current_axis_color, fontweight='bold')
+    ax4.set_ylabel("부서명", color=current_axis_color, fontweight='bold')
+    ax4.tick_params(colors=current_axis_color, labelsize=9)
+    ax4.xaxis.label.set_color(current_axis_color)
+    ax4.yaxis.label.set_color(current_axis_color)
     
     max_dept4 = dept_cost_sum.max() if len(dept_cost_sum) > 0 else 1
     ax4.set_xlim(0, max_dept4 * 1.35)
     
+    plt.xticks(color=current_axis_color)
+    plt.yticks(color=current_axis_color)
     st.pyplot(fig4)
     
     with st.container():
