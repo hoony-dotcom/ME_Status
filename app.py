@@ -1,3 +1,4 @@
+# 앱 이름: 병원 의료장비 현황 대시보드
 import os
 import glob
 import re
@@ -16,24 +17,29 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# 모바일(안드로이드/iOS) 및 클라우드 환경 완벽 대응 한글 폰트 설정 함수
+# 한글 폰트 깨짐(네모 박스 현상) 방지 및 완벽 대응 폰트 설정 함수
 def set_korean_font():
-    nanum_fonts = [f for f in fm.fontManager.ttflist if 'Nanum' in f.name or ' 나눔' in f.name]
+    font_list = [f.name for f in fm.fontManager.ttflist]
     
-    if nanum_fonts:
-        plt.rcParams['font.family'] = nanum_fonts[0].name
-    else:
-        font_list = [f.name for f in fm.fontManager.ttflist]
-        candidates = [
-            'NanumGothic', 'Nanum Barun Gothic', 'Malgun Gothic', 
-            'AppleGothic', 'Apple SD Gothic Neo', 'DejaVu Sans'
-        ]
-        selected_font = 'DejaVu Sans'
-        for font in candidates:
-            if font in font_list:
-                selected_font = font
+    # 우선순위 폰트 후보군 (나눔, 맑은 고딕, 애플고딕 등)
+    candidates = [
+        'NanumGothic', 'Nanum Barun Gothic', 'NanumSquare', 
+        'Malgun Gothic', 'AppleGothic', 'Apple SD Gothic Neo', 'DejaVu Sans'
+    ]
+    
+    selected_font = None
+    for candidate in candidates:
+        for f_name in font_list:
+            if candidate.lower() in f_name.lower():
+                selected_font = f_name
                 break
+        if selected_font:
+            break
+            
+    if selected_font:
         plt.rcParams['font.family'] = selected_font
+    else:
+        plt.rcParams['font.family'] = 'sans-serif'
         
     plt.rcParams['axes.unicode_minus'] = False # 마이너스 기호 깨짐 방지
 
@@ -124,7 +130,11 @@ def load_data(path):
 
 raw_df = load_data(file_path)
 
-# 5. 사이드바 설정 및 필터 옵션 추가
+# 5. 사이드바 설정 (제작 및 문의 정보 상단 배치)
+st.sidebar.markdown("### 📌 제작 및 문의")
+st.sidebar.markdown("**인하대병원 의용공학팀**\n\n📧 `dhkoh@inhauh.com`")
+st.sidebar.markdown("---")
+
 st.sidebar.header("⚙️ 대시보드 필터 설정")
 st.sidebar.info(f"📂 **사용 중인 파일**:\n`{os.path.basename(file_path)}`")
 
@@ -165,7 +175,7 @@ st.title("🏥 병원 의료장비 현황 대시보드")
 st.markdown(f"**📅 기준일:** {base_date_display} &nbsp;&nbsp;|&nbsp;&nbsp; **현재 필터:** {filter_status_text}")
 st.markdown("---")
 
-# 7. 상단 KPI 요약 카드 (모바일 반응형 CSS 및 줄임표 방지 적용)
+# 7. 상단 KPI 요약 카드
 total_cost_thousand = df['취득가'].sum() / 1_000
 high_risk_count = len(df[df['등급\n분류'].astype(str).str.contains('3|4')])
 d_status_count = len(df[df['자산\n상태'] == 'D'])
@@ -201,8 +211,6 @@ kpi_html = f"""
     word-break: break-all;
     line-height: 1.3;
 }}
-
-/* 모바일 화면(폭 768px 이하)에서 카드 크기 조정 */
 @media (max-width: 768px) {{
     .kpi-card {{
         min-width: 100%;
@@ -285,7 +293,6 @@ with row1_col2:
     fig_period, ax_period = plt.subplots(figsize=(6, 4.5))
     barplot_obj = sns.barplot(x=period_counts.index, y=period_counts.values, ax=ax_period, palette='crest')
     
-    # 막대 그래프 위에 수량(대수) 표시
     for p in barplot_obj.patches:
         height = p.get_height()
         if height > 0:
@@ -341,7 +348,6 @@ with row2_col1:
     fig2, ax2 = plt.subplots(figsize=(6, 4.5))
     barplot_grade2 = sns.barplot(x=grade_counts.index, y=grade_counts.values, ax=ax2, palette='viridis')
     
-    # 세로 막대 그래프 위에 수량(대수) 표시
     for p in barplot_grade2.patches:
         height = p.get_height()
         if height > 0:
@@ -375,7 +381,6 @@ with row2_col2:
     fig3, ax3 = plt.subplots(figsize=(6, 4.5))
     barplot_dept3 = sns.barplot(y=dept_counts.index, x=dept_counts.values, ax=ax3, palette='mako', orient='h')
     
-    # 가로 막대 그래프 오른쪽 끝에 수량(대수) 표시
     for p in barplot_dept3.patches:
         width = p.get_width()
         if width > 0:
@@ -413,7 +418,6 @@ with row3_col1:
     fig4, ax4 = plt.subplots(figsize=(6, 4.5))
     barplot_dept4 = sns.barplot(y=dept_cost_sum.index, x=dept_cost_sum.values, ax=ax4, palette='rocket', orient='h')
     
-    # 가로 막대 그래프 오른쪽 끝에 금액 표시
     for p in barplot_dept4.patches:
         width = p.get_width()
         if width > 0:
@@ -446,7 +450,6 @@ st.markdown("---")
 st.subheader("🔍 장비 상세 데이터 목록")
 search_query = st.text_input("검색어 입력 (장비명, 모델명, 부서명 등):", "")
 
-# 검색어가 있으면 필터링, 없으면 전체 표시
 if search_query:
     display_target_df = df[df.astype(str).apply(lambda x: x.str.contains(search_query, case=False)).any(axis=1)].copy()
     st.write(f"검색 결과: {len(display_target_df):,} 대")
@@ -454,7 +457,6 @@ else:
     display_target_df = df.copy()
     st.write(f"전체 목록: {len(display_target_df):,} 대")
 
-# 취득가 천원 단위 변환 및 천 단위 콤마 포맷팅 적용 (사용기간 등급 포함)
 display_cols = ['관리번호', '장비명/구성품명', '사용\n부서', '자산\n상태', '등급\n분류', '사용기간_등급', '취득가']
 existing_display_cols = [c for c in display_cols if c in display_target_df.columns]
 
@@ -463,3 +465,4 @@ display_df['취득가(천원)'] = (display_df['취득가'] / 1_000).round(1).app
 display_df = display_df.drop(columns=['취득가'])
 
 st.dataframe(display_df, hide_index=True)
+# 앱 이름: 병원 의료장비 현황 대시보드
