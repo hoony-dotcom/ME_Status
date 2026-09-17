@@ -457,7 +457,8 @@ else:
     display_target_df = df.copy()
     st.write(f"전체 목록: {len(display_target_df):,} 대")
 
-display_cols = ['관리번호', '장비명/구성품명', '사용\n부서', '자산\n상태', '등급\n분류', '사용기간_등급', '취득가']
+# 상세 목록에 '의공담당', '취득일자' 컬럼 추가 반영
+display_cols = ['관리번호', '장비명/구성품명', '사용\n부서', '의공담당', '취득일자', '자산\n상태', '등급\n분류', '사용기간_등급', '취득가']
 existing_display_cols = [c for c in display_cols if c in display_target_df.columns]
 
 display_df = display_target_df[existing_display_cols].copy()
