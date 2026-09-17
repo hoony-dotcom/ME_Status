@@ -130,9 +130,9 @@ def load_data(path):
 
 raw_df = load_data(file_path)
 
-# 5. 사이드바 설정 (제작 및 문의 정보 상단 배치)
+# 5. 사이드바 설정 (제작 및 문의 정보 상단 배치 및 메일 링크 추가)
 st.sidebar.markdown("### 📌 제작 및 문의")
-st.sidebar.markdown("**인하대병원 의용공학팀**\n\n📧 `dhkoh@inhauh.com`")
+st.sidebar.markdown("**인하대병원 의용공학팀**\n\n📧 [dhkoh@inhauh.com](mailto:dhkoh@inhauh.com)")
 st.sidebar.markdown("---")
 
 st.sidebar.header("⚙️ 대시보드 필터 설정")
