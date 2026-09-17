@@ -42,7 +42,6 @@ def set_korean_font():
     plt.rcParams['axes.unicode_minus'] = False
     plt.rcParams['figure.facecolor'] = 'none'
     plt.rcParams['axes.facecolor'] = 'none'
-    # 다크모드 시인성 확보를 위해 기본 텍스트 및 축 색상을 회색톤(또는 자동응답)으로 지정
     plt.rcParams['text.color'] = '#555555'
     plt.rcParams['axes.labelcolor'] = '#555555'
     plt.rcParams['xtick.color'] = '#555555'
@@ -269,10 +268,10 @@ with row1_col1:
         colors=sns.color_palette('pastel')
     )
     
-    # 파이차트 글자 색상 명시 (다크모드 대응)
+    # 파이차트 글자 색상 명시 (다크모드 가시성 확보)
     for t in texts + autotexts:
         t.set_fontsize(10)
-        t.set_color('inherit') # 혹은 가시적인 색상 적용 가능
+        t.set_color('#333333')
         
     ax1.axis('equal')
     st.pyplot(fig1)
@@ -310,16 +309,15 @@ with row1_col2:
                 textcoords='offset points',
                 fontsize=9,
                 fontweight='bold',
-                color='#333333' if plt.rcParams.get('figure.facecolor') == 'none' else 'white'
+                color='#333333'
             )
             
     ax_period.set_ylabel("대수")
     ax_period.set_xlabel("사용기간 등급")
     
-    # 축 글자 가시성 확보를 위한 설정
-    ax_period.tick_params(colors='#666666', labelsize=9)
-    ax_period.xaxis.label.set_color('#666666')
-    ax_period.yaxis.label.set_color('#666666')
+    ax_period.tick_params(colors='#555555', labelsize=9)
+    ax_period.xaxis.label.set_color('#555555')
+    ax_period.yaxis.label.set_color('#555555')
     
     max_val = period_counts.max() if len(period_counts) > 0 else 1
     ax_period.set_ylim(0, max_val * 1.25)
@@ -370,14 +368,15 @@ with row2_col1:
                 xytext=(0, 3),  
                 textcoords='offset points',
                 fontsize=9,
-                fontweight='bold'
+                fontweight='bold',
+                color='#333333'
             )
             
     ax2.set_ylabel("대수")
     ax2.set_xlabel("등급")
-    ax2.tick_params(colors='#666666', labelsize=9)
-    ax2.xaxis.label.set_color('#666666')
-    ax2.yaxis.label.set_color('#666666')
+    ax2.tick_params(colors='#555555', labelsize=9)
+    ax2.xaxis.label.set_color('#555555')
+    ax2.yaxis.label.set_color('#555555')
     
     max_grade2 = grade_counts.max() if len(grade_counts) > 0 else 1
     ax2.set_ylim(0, max_grade2 * 1.25)
@@ -406,14 +405,15 @@ with row2_col2:
                 xytext=(5, 0),  
                 textcoords='offset points',
                 fontsize=9,
-                fontweight='bold'
+                fontweight='bold',
+                color='#333333'
             )
             
     ax3.set_xlabel("장비 대수")
     ax3.set_ylabel("부서명")
-    ax3.tick_params(colors='#666666', labelsize=9)
-    ax3.xaxis.label.set_color('#666666')
-    ax3.yaxis.label.set_color('#666666')
+    ax3.tick_params(colors='#555555', labelsize=9)
+    ax3.xaxis.label.set_color('#555555')
+    ax3.yaxis.label.set_color('#555555')
     
     max_dept3 = dept_counts.max() if len(dept_counts) > 0 else 1
     ax3.set_xlim(0, max_dept3 * 1.3)
@@ -446,14 +446,15 @@ with row3_col1:
                 xytext=(5, 0),  
                 textcoords='offset points',
                 fontsize=8.5,
-                fontweight='bold'
+                fontweight='bold',
+                color='#333333'
             )
             
     ax4.set_xlabel("취득가 합계 (천원)")
     ax4.set_ylabel("부서명")
-    ax4.tick_params(colors='#666666', labelsize=9)
-    ax4.xaxis.label.set_color('#666666')
-    ax4.yaxis.label.set_color('#666666')
+    ax4.tick_params(colors='#555555', labelsize=9)
+    ax4.xaxis.label.set_color('#555555')
+    ax4.yaxis.label.set_color('#555555')
     
     max_dept4 = dept_cost_sum.max() if len(dept_cost_sum) > 0 else 1
     ax4.set_xlim(0, max_dept4 * 1.35)
@@ -478,8 +479,6 @@ else:
     display_target_df = df.copy()
     st.write(f"전체 목록: {len(display_target_df):,} 대")
 
-display_cols = ['관리번호', '장비명/구성품명', '사용\n부서', '의공담당', '취득일자', 'z산\n상태' if 'z산\n상태' in df.columns else '자산\n상태', '등급\n분류', '사용기간_등급', '취득가']
-# 안전한 컬럼 매핑 조정
 display_cols = ['관리번호', '장비명/구성품명', '사용\n부서', '의공담당', '취득일자', '자산\n상태', '등급\n분류', '사용기간_등급', '취득가']
 existing_display_cols = [c for c in display_cols if c in display_target_df.columns]
 
