@@ -461,8 +461,17 @@ display_cols = ['관리번호', '장비명/구성품명', '사용\n부서', '자
 existing_display_cols = [c for c in display_cols if c in display_target_df.columns]
 
 display_df = display_target_df[existing_display_cols].copy()
-display_df['취득가(천원)'] = (display_df['취득가'] / 1_000).round(1).apply(lambda x: f"{x:,.1f}")
-display_df = display_df.drop(columns=['취득가'])
+display_df['취득가'] = 'hidden'
 
-st.dataframe(display_df, hide_index=True)
+# 테이블 상단 우측 다운로드 및 전체화면 메뉴 숨김 CSS 적용
+hide_dataframe_row_index = """
+<style>
+[data-testid="stElementToolbar"] {
+    display: none;
+}
+</style>
+"""
+st.markdown(hide_dataframe_row_index, unsafe_allow_html=True)
+
+st.dataframe(display_df, hide_index=True, use_container_width=True)
 # 앱 이름: 병원 의료장비 현황 대시보드
