@@ -150,6 +150,7 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("🔗 의용공학팀 개발 앱")
 st.sidebar.markdown("1. [의료장비 투자집행 계획 실적](https://buly.kr/DEbvdwF)")
 st.sidebar.markdown("2. [의료장비 현황 바로가기](https://buly.kr/7mERs3u)")
+st.sidebar.markdown("3. [심평원 신고 장비 상세현황](https://buly.kr/uWvRbg)")
 
 df = raw_df.copy()
 
