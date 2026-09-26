@@ -1,4 +1,4 @@
-# 앱 이름: 병원 의료장비 현황 대시보드 (라이트 모드 고정)
+# 앱 이름: 병원 의료장비 현황 대시보드 (라이트 모드 고정 및 팁 수정)
 import os
 import glob
 import re
@@ -512,7 +512,7 @@ with row3_col1:
     st.pyplot(fig4)
     
     with st.container():
-        st.markdown("💡 **팁:** 부서별 장비 취득가 합계 상위 10개 부서의 현황을 보여줍니다.")
+        st.markdown("💡 **팁:** 부서별 장비 취득가 합계 상위 10개 부서의 현황을 보여줍니다. (장부상 취득가 기준)")
 
 with row3_col2:
     st.subheader("📊 부서별 보험가입가 합계 TOP 10 (금액 기준)")
@@ -554,7 +554,7 @@ with row3_col2:
     st.pyplot(fig_ins_dept)
     
     with st.container():
-        st.markdown("💡 **팁:** 부서별 장비 보험가입가 합계 상위 10개 부서의 현황을 보여줍니다.")
+        st.markdown("💡 **팁:** 부서별 장비 보험가입가 합계 상위 10개 부서의 현황을 보여줍니다. ((부외, 임차, 기증 등) 장부외 자산으로 장비금액을 환산하여 계산된 금액)")
 
 st.markdown("")
 
@@ -643,7 +643,7 @@ with row4_col2:
     st.pyplot(fig_ins_handler)
     
     with st.container():
-        st.markdown("💡 **팁:** 담당자별 관리 장비의 보험가입가 총액 및 비율을 보여줍니다.")
+        st.markdown("💡 **팁:** 담당자별 관리 장비의 보험가입가 총액 및 비율을 보여줍니다. ((부외, 임차, 기증 등) 장부외 자산으로 장비금액을 환산하여 계산된 금액)")
 
 # 12. 하단 장비 상세 데이터 목록 (기본 노출 및 검색 기능)
 st.markdown("---")
