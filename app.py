@@ -1,4 +1,4 @@
-# 앱 이름: 병원 의료장비 현황 대시보드
+# 앱 이름: 병원 의료장비 현황 대시보드 (라이트 모드 고정)
 import os
 import glob
 import re
@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import seaborn as sns
 
-# 1. 페이지 설정
+# 1. 페이지 설정 (라이트 모드 기본 적용을 위한 설정 포함)
 st.set_page_config(
     page_title="의료장비 현황 대시보드", 
     page_icon="🏥", 
@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
-# 한글 폰트 설정 및 그래프 배경을 검은색 계열로 고정
+# 한글 폰트 설정 및 라이트 모드에 맞춘 그래프 배경/텍스트 색상 설정
 def set_korean_font():
     font_list = [f.name for f in fm.fontManager.ttflist]
     candidates = [
@@ -41,14 +41,15 @@ def set_korean_font():
         
     plt.rcParams['axes.unicode_minus'] = False
     
-    # 그래프 내부 및 전체 배경색을 어두운 검은색 계열(#1E1E1E)으로 고정
-    plt.rcParams['figure.facecolor'] = '#1E1E1E'
-    plt.rcParams['axes.facecolor'] = '#1E1E1E'
+    # 라이트 모드에 맞춘 배경색 설정 (화이트 계열)
+    plt.rcParams['figure.facecolor'] = '#FFFFFF'
+    plt.rcParams['axes.facecolor'] = '#FFFFFF'
 
 set_korean_font()
 
-current_text_color = '#FFFFFF'  
-current_axis_color = '#E0E0E0'  
+# 라이트 모드 고정을 위한 고대비 텍스트 및 축 색상
+current_text_color = '#212529'  # 선명한 어두운 색상
+current_axis_color = '#343A40'  # 축 레이블용 진한 회색
 
 # 2. 폴더 내에서 가장 최신의 '의료기기 현황조회' 엑셀 파일 자동 탐색 함수
 def get_latest_excel_file():
@@ -80,7 +81,7 @@ def get_base_date(filename):
 
 base_date_display = get_base_date(file_path)
 
-# 4. 데이터 로드 및 전처리 함수 (사용부서 88: 매각완료, 77: 노후불용 처리중)
+# 4. 데이터 로드 및 전처리 함수
 @st.cache_data
 def load_data(path):
     df = pd.read_excel(path, sheet_name=0)
@@ -96,7 +97,11 @@ def load_data(path):
     
     df['취득가'] = pd.to_numeric(df['취득가'], errors='coerce').fillna(0)
     
-    # 의공담당 결측치 처리
+    if '보험가입가' in df.columns:
+        df['보험가입가'] = pd.to_numeric(df['보험가입가'], errors='coerce').fillna(0)
+    else:
+        df['보험가입가'] = 0.0
+    
     df['의공담당'] = df['의공담당'].fillna('미지정').astype(str).str.strip()
     df.loc[df['의공담당'] == '', '의공담당'] = '미지정'
     
@@ -171,18 +176,22 @@ filter_status_text = " | ".join(filter_status_desc)
 
 total_count_for_ratio = len(df) if len(df) > 0 else 1
 
-# 전체 총 취득가 (천원 단위) 계산
 total_cost_sum_grand = df['취득가'].sum() / 1_000
 if total_cost_sum_grand <= 0:
     total_cost_sum_grand = 1.0
+
+total_insurance_sum_grand = df['보험가입가'].sum() / 1_000
+if total_insurance_sum_grand <= 0:
+    total_insurance_sum_grand = 1.0
 
 # 6. 상단 타이틀 및 기준일 표시
 st.title("🏥 병원 의료장비 현황 대시보드")
 st.markdown(f"**📅 기준일:** {base_date_display} &nbsp;&nbsp;|&nbsp;&nbsp; **현재 필터:** {filter_status_text}")
 st.markdown("---")
 
-# 7. 상단 KPI 요약 카드
+# 7. 상단 KPI 요약 카드 (라이트 모드 고대비 디자인 적용)
 total_cost_thousand = df['취득가'].sum() / 1_000
+total_insurance_thousand = df['보험가입가'].sum() / 1_000
 high_risk_count = len(df[df['등급\n분류'].astype(str).str.contains('3|4')])
 d_status_count = len(df[df['자산\n상태'] == 'D'])
 
@@ -196,24 +205,25 @@ kpi_html = f"""
 }}
 .kpi-card {{
     flex: 1;
-    min-width: 160px;
-    background-color: var(--secondary-background-color, #f8f9fa);
-    border: 1px solid var(--border-color, #e9ecef);
+    min-width: 150px;
+    background-color: #FFFFFF;
+    border: 1px solid #DCE2E6;
+    border-top: 4px solid #3182CE;
     border-radius: 8px;
     padding: 14px 16px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.04);
 }}
 .kpi-label {{
     font-size: 13px;
-    color: var(--text-color, #6c757d);
-    font-weight: 600;
+    color: #4A5568;
+    font-weight: 700;
     margin-bottom: 6px;
     word-break: keep-all;
 }}
 .kpi-value {{
-    font-size: 22px;
-    color: var(--text-color, #212529);
-    font-weight: bold;
+    font-size: 20px;
+    color: #1A202C;
+    font-weight: 800;
     word-break: break-all;
     line-height: 1.3;
 }}
@@ -222,7 +232,7 @@ kpi_html = f"""
         min-width: 100%;
     }}
     .kpi-value {{
-        font-size: 20px;
+        font-size: 18px;
     }}
 }}
 </style>
@@ -232,15 +242,19 @@ kpi_html = f"""
         <div class="kpi-label">조회 장비 대수</div>
         <div class="kpi-value">{len(df):,} 대</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" style="border-top-color: #38A169;">
         <div class="kpi-label">총 취득가액</div>
         <div class="kpi-value">{total_cost_thousand:,.1f} 천원</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" style="border-top-color: #DD6B20;">
+        <div class="kpi-label">총 보험가입가액</div>
+        <div class="kpi-value">{total_insurance_thousand:,.1f} 천원</div>
+    </div>
+    <div class="kpi-card" style="border-top-color: #E53E3E;">
         <div class="kpi-label">고위험 장비 (3/4등급)</div>
         <div class="kpi-value">{high_risk_count:,} 대</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" style="border-top-color: #718096;">
         <div class="kpi-label">노후/불용 검토 (D등급)</div>
         <div class="kpi-value">{d_status_count:,} 대</div>
     </div>
@@ -258,8 +272,8 @@ with row1_col1:
     status_counts = df['자산\n상태'].value_counts()
     
     fig1, ax1 = plt.subplots(figsize=(6, 4.5))
-    fig1.patch.set_facecolor('#1E1E1E')
-    ax1.set_facecolor('#1E1E1E')
+    fig1.patch.set_facecolor('#FFFFFF')
+    ax1.set_facecolor('#FFFFFF')
     
     def make_autopct(values):
         def my_autopct(pct):
@@ -273,7 +287,7 @@ with row1_col1:
         labels=status_counts.index, 
         autopct=make_autopct(status_counts.values), 
         startangle=90, 
-        colors=sns.color_palette('Pastel1')
+        colors=sns.color_palette('Set2')
     )
     
     for t in texts:
@@ -283,7 +297,7 @@ with row1_col1:
         
     for at in autotexts:
         at.set_fontsize(10)
-        at.set_color(current_text_color)
+        at.set_color('#111111')
         at.set_weight('bold')
         
     ax1.axis('equal')
@@ -309,10 +323,10 @@ with row1_col2:
     period_counts = df['사용기간_등급'].value_counts().reindex(period_order).fillna(0)
     
     fig_period, ax_period = plt.subplots(figsize=(6, 4.5))
-    fig_period.patch.set_facecolor('#1E1E1E')
-    ax_period.set_facecolor('#1E1E1E')
+    fig_period.patch.set_facecolor('#FFFFFF')
+    ax_period.set_facecolor('#FFFFFF')
     
-    barplot_obj = sns.barplot(x=period_counts.index, y=period_counts.values, ax=ax_period, palette='Set2')
+    barplot_obj = sns.barplot(x=period_counts.index, y=period_counts.values, ax=ax_period, palette='Blues_r')
     
     for p in barplot_obj.patches:
         height = p.get_height()
@@ -374,10 +388,10 @@ with row2_col1:
     grade_counts = grade_counts.reindex(sorted_grades).dropna()
     
     fig2, ax2 = plt.subplots(figsize=(6, 4.5))
-    fig2.patch.set_facecolor('#1E1E1E')
-    ax2.set_facecolor('#1E1E1E')
+    fig2.patch.set_facecolor('#FFFFFF')
+    ax2.set_facecolor('#FFFFFF')
     
-    barplot_grade2 = sns.barplot(x=grade_counts.index, y=grade_counts.values, ax=ax2, palette='Pastel2')
+    barplot_grade2 = sns.barplot(x=grade_counts.index, y=grade_counts.values, ax=ax2, palette='Oranges_r')
     
     for p in barplot_grade2.patches:
         height = p.get_height()
@@ -416,10 +430,10 @@ with row2_col2:
     dept_counts = df['사용\n부서'].value_counts().head(10)
     
     fig3, ax3 = plt.subplots(figsize=(6, 4.5))
-    fig3.patch.set_facecolor('#1E1E1E')
-    ax3.set_facecolor('#1E1E1E')
+    fig3.patch.set_facecolor('#FFFFFF')
+    ax3.set_facecolor('#FFFFFF')
     
-    barplot_dept3 = sns.barplot(y=dept_counts.index, x=dept_counts.values, ax=ax3, palette='pastel', orient='h')
+    barplot_dept3 = sns.barplot(y=dept_counts.index, x=dept_counts.values, ax=ax3, palette='Purples_r', orient='h')
     
     for p in barplot_dept3.patches:
         width = p.get_width()
@@ -455,7 +469,7 @@ with row2_col2:
 
 st.markdown("")
 
-# 10. 메인 그래프 영역 (3단: 부서별 취득가 합계 TOP 10 / 의용공학팀 팀원 별 관리 대수 현황)
+# 10. 메인 그래프 영역 (3단: 부서별 취득가 합계 TOP 10 / 부서별 보험가입가 합계 TOP 10)
 row3_col1, row3_col2 = st.columns(2)
 
 with row3_col1:
@@ -463,10 +477,10 @@ with row3_col1:
     dept_cost_sum = df.groupby('사용\n부서')['취득가'].sum().sort_values(ascending=False).head(10) / 1_000
     
     fig4, ax4 = plt.subplots(figsize=(6, 4.5))
-    fig4.patch.set_facecolor('#1E1E1E')
-    ax4.set_facecolor('#1E1E1E')
+    fig4.patch.set_facecolor('#FFFFFF')
+    ax4.set_facecolor('#FFFFFF')
     
-    barplot_dept4 = sns.barplot(y=dept_cost_sum.index, x=dept_cost_sum.values, ax=ax4, palette='Set3', orient='h')
+    barplot_dept4 = sns.barplot(y=dept_cost_sum.index, x=dept_cost_sum.values, ax=ax4, palette='Greens_r', orient='h')
     
     for p in barplot_dept4.patches:
         width = p.get_width()
@@ -501,14 +515,61 @@ with row3_col1:
         st.markdown("💡 **팁:** 부서별 장비 취득가 합계 상위 10개 부서의 현황을 보여줍니다.")
 
 with row3_col2:
+    st.subheader("📊 부서별 보험가입가 합계 TOP 10 (금액 기준)")
+    dept_insurance_sum = df.groupby('사용\n부서')['보험가입가'].sum().sort_values(ascending=False).head(10) / 1_000
+    
+    fig_ins_dept, ax_ins_dept = plt.subplots(figsize=(6, 4.5))
+    fig_ins_dept.patch.set_facecolor('#FFFFFF')
+    ax_ins_dept.set_facecolor('#FFFFFF')
+    
+    barplot_ins_dept = sns.barplot(y=dept_insurance_sum.index, x=dept_insurance_sum.values, ax=ax_ins_dept, palette='YlOrRd_r', orient='h')
+    
+    for p in barplot_ins_dept.patches:
+        width = p.get_width()
+        if width > 0:
+            pct_val = (width / total_insurance_sum_grand) * 100
+            ax_ins_dept.annotate(
+                f'{width:,.1f}천원 ({pct_val:.1f}%)',
+                (width, p.get_y() + p.get_height() / 2.),
+                ha='left', va='center',
+                xytext=(5, 0),  
+                textcoords='offset points',
+                fontsize=8.5,
+                fontweight='bold',
+                color=current_text_color
+            )
+            
+    ax_ins_dept.set_xlabel("보험가입가 합계 (천원)", color=current_axis_color, fontweight='bold')
+    ax_ins_dept.set_ylabel("부서명", color=current_axis_color, fontweight='bold')
+    ax_ins_dept.tick_params(colors=current_axis_color, labelsize=9)
+    ax_ins_dept.xaxis.label.set_color(current_axis_color)
+    ax_ins_dept.yaxis.label.set_color(current_axis_color)
+    
+    max_ins_dept = dept_insurance_sum.max() if len(dept_insurance_sum) > 0 else 1
+    ax_ins_dept.set_xlim(0, max_ins_dept * 1.4)
+    
+    plt.xticks(color=current_axis_color)
+    plt.yticks(color=current_axis_color)
+    fig_ins_dept.tight_layout()
+    st.pyplot(fig_ins_dept)
+    
+    with st.container():
+        st.markdown("💡 **팁:** 부서별 장비 보험가입가 합계 상위 10개 부서의 현황을 보여줍니다.")
+
+st.markdown("")
+
+# 11. 메인 그래프 영역 (4단: 의용공학팀 팀원 별 관리 대수 / 담당자별 보험가입가 합계)
+row4_col1, row4_col2 = st.columns(2)
+
+with row4_col1:
     st.subheader("📊 의용공학팀 팀원 별 관리 대수 현황")
     handler_counts = df['의공담당'].value_counts()
     
     fig_handler, ax_handler = plt.subplots(figsize=(6, 4.5))
-    fig_handler.patch.set_facecolor('#1E1E1E')
-    ax_handler.set_facecolor('#1E1E1E')
+    fig_handler.patch.set_facecolor('#FFFFFF')
+    ax_handler.set_facecolor('#FFFFFF')
     
-    barplot_handler = sns.barplot(y=handler_counts.index, x=handler_counts.values, ax=ax_handler, palette='spring', orient='h')
+    barplot_handler = sns.barplot(y=handler_counts.index, x=handler_counts.values, ax=ax_handler, palette='Spectral', orient='h')
     
     for p in barplot_handler.patches:
         width = p.get_width()
@@ -542,7 +603,49 @@ with row3_col2:
     with st.container():
         st.markdown("💡 **팁:** 의용공학팀 팀원별 담당 장비 수량 및 비율을 보여줍니다.")
 
-# 11. 하단 장비 상세 데이터 목록 (기본 노출 및 검색 기능)
+with row4_col2:
+    st.subheader("📊 의용공학팀 담당자별 보험가입가 합계")
+    handler_insurance_sum = df.groupby('의공담당')['보험가입가'].sum().sort_values(ascending=False) / 1_000
+    
+    fig_ins_handler, ax_ins_handler = plt.subplots(figsize=(6, 4.5))
+    fig_ins_handler.patch.set_facecolor('#FFFFFF')
+    ax_ins_handler.set_facecolor('#FFFFFF')
+    
+    barplot_ins_handler = sns.barplot(y=handler_insurance_sum.index, x=handler_insurance_sum.values, ax=ax_ins_handler, palette='PuBuGn_r', orient='h')
+    
+    for p in barplot_ins_handler.patches:
+        width = p.get_width()
+        if width > 0:
+            pct_val = (width / total_insurance_sum_grand) * 100
+            ax_ins_handler.annotate(
+                f'{width:,.1f}천원 ({pct_val:.1f}%)',
+                (width, p.get_y() + p.get_height() / 2.),
+                ha='left', va='center',
+                xytext=(5, 0),  
+                textcoords='offset points',
+                fontsize=8.5,
+                fontweight='bold',
+                color=current_text_color
+            )
+            
+    ax_ins_handler.set_xlabel("보험가입가 합계 (천원)", color=current_axis_color, fontweight='bold')
+    ax_ins_handler.set_ylabel("담당자", color=current_axis_color, fontweight='bold')
+    ax_ins_handler.tick_params(colors=current_axis_color, labelsize=9)
+    ax_ins_handler.xaxis.label.set_color(current_axis_color)
+    ax_ins_handler.yaxis.label.set_color(current_axis_color)
+    
+    max_ins_handler = handler_insurance_sum.max() if len(handler_insurance_sum) > 0 else 1
+    ax_ins_handler.set_xlim(0, max_ins_handler * 1.4)
+    
+    plt.xticks(color=current_axis_color)
+    plt.yticks(color=current_axis_color)
+    fig_ins_handler.tight_layout()
+    st.pyplot(fig_ins_handler)
+    
+    with st.container():
+        st.markdown("💡 **팁:** 담당자별 관리 장비의 보험가입가 총액 및 비율을 보여줍니다.")
+
+# 12. 하단 장비 상세 데이터 목록 (기본 노출 및 검색 기능)
 st.markdown("---")
 st.subheader("🔍 장비 상세 데이터 목록")
 search_query = st.text_input("검색어 입력 (장비명, 모델명, 부서명 등):", "")
@@ -554,11 +657,14 @@ else:
     display_target_df = df.copy()
     st.write(f"전체 목록: {len(display_target_df):,} 대")
 
-display_cols = ['관리번호', '장비명/구성품명', '사용\n부서', '의공담당', '취득일자', '자산\n상태', '등급\n분류', '사용기간_등급', '취득가']
+display_cols = ['관리번호', '장비명/구성품명', '사용\n부서', '의공담당', '취득일자', '자산\n상태', '등급\n분류', '사용기간_등급', '취득가', '보험가입가']
 existing_display_cols = [c for c in display_cols if c in display_target_df.columns]
 
 display_df = display_target_df[existing_display_cols].copy()
-display_df['취득가'] = 'hidden'
+if '취득가' in display_df.columns:
+    display_df['취득가'] = 'hidden'
+if '보험가입가' in display_df.columns:
+    display_df['보험가입가'] = 'hidden'
 
 hide_dataframe_row_index = """
 <style>
