@@ -1,4 +1,4 @@
-# 앱 이름: 병원 의료장비 현황 대시보드 (라이트 모드 고정 및 팁 수정)
+# 앱 이름: 병원 의료장비 현황 대시보드 (납품대기 설명 수정 반영)
 import os
 import glob
 import re
@@ -149,7 +149,7 @@ st.sidebar.info(f"📂 **사용 중인 파일**:\n`{os.path.basename(file_path)}
 
 include_sold = st.sidebar.checkbox("매각완료 장비 포함하기", value=False, help="체크하면 매각완료(부서코드 88) 장비가 포함되어 조회됩니다.")
 include_obsolete = st.sidebar.checkbox("노후불용 처리중 장비 포함하기", value=True, help="체크 해제하면 노후불용 처리중(부서코드 77) 장비가 제외됩니다.")
-include_delivery_wait = st.sidebar.checkbox("납품대기(취득일자 없음) 장비 포함하기", value=True, help="체크 해제하면 취득일자가 없어 '납품대기'로 분류된 장비가 제외됩니다.")
+include_delivery_wait = st.sidebar.checkbox("납품대기(발주 계약 및 검수 전) 장비 포함하기", value=True, help="체크 해제하면 취득일자가 없어 '납품대기'로 분류된 장비가 제외됩니다.")
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔗 의용공학팀 개발 앱")
@@ -360,7 +360,7 @@ with row1_col2:
     
     with st.container():
         st.markdown("**📋 사용기간 등급 기준 안내**")
-        st.markdown("- **납품대기**: 취득일자 정보가 없는 장비")
+        st.markdown("- **납품대기**: 발주 계약되었으나 검수가 완료되지 않은 장비")
         st.markdown("- **가등급**: 취득일 기준 3년 이내")
         st.markdown("- **나등급**: 취득일 기준 3년 이상 ~ 7년 이내")
         st.markdown("- **다등급**: 취득일 기준 7년 이상 ~ 15년 이내")
