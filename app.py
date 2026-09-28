@@ -1,4 +1,4 @@
-# 앱 이름: 병원 의료장비 현황 대시보드 (납품대기 설명 수정 반영)
+# 앱 이름: 병원 의료장비 현황 대시보드 (사이드바 개발 앱 링크 5개 수정 반영)
 import os
 import glob
 import re
@@ -156,6 +156,8 @@ st.sidebar.subheader("🔗 의용공학팀 개발 앱")
 st.sidebar.markdown("1. [의료장비 투자집행 계획 실적](https://buly.kr/DEbvdwF)")
 st.sidebar.markdown("2. [인하대병원 의료장비 보유 현황](https://buly.kr/7mERs3u)")
 st.sidebar.markdown("3. [건강보험심사평가원 의료장비 상세현황 조회](https://buly.kr/uWvRbg)")
+st.sidebar.markdown("4. [인하대병원 의료장비 조회 시스템](https://buly.kr/6BzfJgY)")
+st.sidebar.markdown("5. [의료기기 백업 현황 대시보드](https://buly.kr/2Jr1qXA)")
 
 df = raw_df.copy()
 
